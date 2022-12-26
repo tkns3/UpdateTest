@@ -181,7 +181,7 @@ namespace UpdateTest
 
             var nexExeTmpPath = $"{NewExePath}.tmp";
             var isSuccess = await Download(DownloadLink, nexExeTmpPath);
-            if (isSuccess)
+            if (!isSuccess)
             {
                 // ダウンロード失敗
                 return;
