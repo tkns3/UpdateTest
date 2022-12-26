@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 using System.Windows;
 
 namespace UpdateTest
@@ -13,5 +8,9 @@ namespace UpdateTest
     /// </summary>
     public partial class App : Application
     {
+        private void Application_Startup(object sender, StartupEventArgs e)
+        {
+            Updater.Initialize(Assembly.GetExecutingAssembly().GetName().Version, e.Args);
+        }
     }
 }
