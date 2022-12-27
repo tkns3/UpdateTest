@@ -10,7 +10,7 @@ namespace UpdateTest
     {
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            Updater.Initialize(Assembly.GetExecutingAssembly().GetName().Version, e.Args);
+            Updater.Initialize(e.Args);
         }
     }
 }

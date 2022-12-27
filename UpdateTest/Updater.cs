@@ -4,21 +4,35 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace UpdateTest
 {
+    // ＜前提＞
+    //   リリースのタグ名は"v*.*.*"の形式で指定しなければならない。
+    //   パッケージバージョンは"*.*.*"の形式で指定しなければならない。
+    // ＜参考＞
+    // アセンブリバージョン 形式は"*.*.*.*"
+    //   Assembly.GetExecutingAssembly().GetName().Version
+    // ファイルバージョン 形式は"*.*.*.*"
+    //   Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>().Version
+    // パッケージバージョン
+    //   Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion
+
     class Updater
     {
         private static readonly string Owner = "tkns3";
         private static readonly string Repo = "UpdateTest";
+        private static readonly string OriginalExeName = "UpdateTest.exe";
         private static readonly string ApiReleasesURL = $"https://api.github.com/repos/{Owner}/{Repo}/releases";
 
         private static HttpClient _client = new();
         private static string[] _arguments = Array.Empty<string>();
 
         public static Version? CurrentVersion { get; private set; }
+        public static Version? LatestVersion { get; private set; }
         public static string ExeDir { get; private set; } = "";
         public static string ExeName { get; private set; } = "";
         public static string ExePath { get; private set; } = "";
@@ -29,11 +43,11 @@ namespace UpdateTest
         public static List<Release> ReleasesCache { get; private set; } = new();
         public static bool IsExistNewVersion { get; private set; } = false;
 
-        public static void Initialize(Version? version, string[] args)
+        public static void Initialize(string[] args)
         {
             ReleasesCache.Clear();
 
-            CurrentVersion = version;
+            CurrentVersion = new Version(Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0");
 
             _arguments = new string[args.Length];
             args.CopyTo(_arguments, 0);
@@ -125,8 +139,8 @@ namespace UpdateTest
                         var tag_name = ReleasesCache[0].tag_name;
                         if (tag_name != null && tag_name.Length > 1)
                         {
-                            var latestVersion = new Version(tag_name.Substring(1));
-                            IsExistNewVersion = latestVersion > CurrentVersion;
+                            LatestVersion = new Version(tag_name[1..]);
+                            IsExistNewVersion = LatestVersion > CurrentVersion;
                         }
                     }
                 }
@@ -160,8 +174,8 @@ namespace UpdateTest
                 return;
             }
 
-            string? DownloadLink = Array.Find(assets, asset => NewExeName.Equals(asset.name))?.browser_download_url;
-            if (string.IsNullOrEmpty(DownloadLink))
+            string? downloadLink = Array.Find(assets, asset => OriginalExeName.Equals(asset.name))?.browser_download_url;
+            if (string.IsNullOrEmpty(downloadLink))
             {
                 // Githubに取得対象が存在しない
                 return;
@@ -180,7 +194,7 @@ namespace UpdateTest
             }
 
             var nexExeTmpPath = $"{NewExePath}.tmp";
-            var isSuccess = await Download(DownloadLink, nexExeTmpPath);
+            var isSuccess = await Download(downloadLink, nexExeTmpPath);
             if (!isSuccess)
             {
                 // ダウンロード失敗
